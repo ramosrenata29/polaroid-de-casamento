@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polaroid de Casamento</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Great+Vibes&family=Montserrat:wght@400;600&family=Pacifico&family=Playfair+Display:ital,wght@0,600;1,400&family=Sacramento&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="brand">
+                <i data-lucide="camera" class="brand-icon"></i>
+                <h1>Polaroid Casamento</h1>
+            </div>
+            <button id="theme-toggle" class="btn-icon" aria-label="Alternar modo noturno">
+                <i data-lucide="moon" id="theme-icon"></i>
+            </button>
+        </header>
+
+        <main class="main-content">
+            <!-- Camera / Live Preview Section -->
+            <section class="camera-section">
+                <div id="polaroid-frame" class="polaroid-frame format-vertical">
+                    <div class="camera-wrapper">
+                        <video id="webcam" autoplay playsinline muted></video>
+                        <canvas id="snapshot-canvas" style="display: none;"></canvas>
+                        <div id="camera-placeholder" class="camera-placeholder" style="display: none;">
+                            <i data-lucide="camera-off"></i>
+                            <p>Câmera desativada ou indisponível</p>
+                            <button id="btn-retry-camera" class="btn btn-secondary btn-sm">Tentar Novamente</button>
+                        </div>
+                    </div>
+                    <div class="polaroid-caption">
+                        <span id="caption-preview-text">Nome do Casal</span>
+                    </div>
+                </div>
+
+                <div class="camera-actions">
+                    <button id="btn-switch-camera" class="btn btn-icon-label btn-secondary" title="Trocar Câmera">
+                        <i data-lucide="flip-camera"></i>
+                        <span>Inverter Câmera</span>
+                    </button>
+                    <button id="btn-capture" class="btn btn-primary btn-large">
+                        <i data-lucide="aperture"></i>
+                        <span>Tirar Foto</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Customization Controls Panel -->
+            <section class="controls-section">
+                <h2><i data-lucide="sliders"></i> Personalização</h2>
+
+                <!-- Text Input -->
+                <div class="control-group">
+                    <label for="input-couple-name">
+                        <i data-lucide="heart" class="label-icon"></i> Nome do Casal / Texto
+                    </label>
+                    <input type="text" id="input-couple-name" placeholder="Ex: Maria & João • 15.10.2026" maxlength="45" value="Maria & João">
+                </div>
+
+                <!-- Aspect Ratio / Format -->
+                <div class="control-group">
+                    <label><i data-lucide="square" class="label-icon"></i> Formato da Foto</label>
+                    <div class="segmented-control" id="format-options">
+                        <button type="button" class="segment-btn active" data-format="vertical">
+                            <i data-lucide="rectangle-vertical"></i> Vertical
+                        </button>
+                        <button type="button" class="segment-btn" data-format="square">
+                            <i data-lucide="square"></i> Quadrado
+                        </button>
+                        <button type="button" class="segment-btn" data-format="horizontal">
+                            <i data-lucide="rectangle-horizontal"></i> Horizontal
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Font Family Selection -->
+                <div class="control-group">
+                    <label for="select-font">
+                        <i data-lucide="type" class="label-icon"></i> Estilo da Fonte
+                    </label>
+                    <select id="select-font" class="custom-select">
+                        <option value="'Dancing Script', cursive" selected>Dancing Script (Manuscrita)</option>
+                        <option value="'Great Vibes', cursive">Great Vibes (Elegante)</option>
+                        <option value="'Sacramento', cursive">Sacramento (Fina)</option>
+                        <option value="'Pacifico', cursive">Pacifico (Descontraída)</option>
+                        <option value="'Playfair Display', serif">Playfair Display (Clássica Serifada)</option>
+                        <option value="'Montserrat', sans-serif">Montserrat (Moderna Clean)</option>
+                    </select>
+                </div>
+
+                <!-- Colors Grid -->
+                <div class="colors-grid">
+                    <!-- Border Color -->
+                    <div class="control-group">
+                        <label for="picker-border-color">
+                            <i data-lucide="palette" class="label-icon"></i> Cor da Borda
+                        </label>
+                        <div class="color-picker-wrapper">
+                            <input type="color" id="picker-border-color" value="#ffffff">
+                            <span id="border-color-hex" class="hex-label">#FFFFFF</span>
+                        </div>
+                        <div class="color-presets" id="border-presets">
+                            <button type="button" class="preset-swatch" data-color="#ffffff" style="background:#ffffff;" title="Branco Tradicional"></button>
+                            <button type="button" class="preset-swatch" data-color="#fdfbf7" style="background:#fdfbf7;" title="Marfim"></button>
+                            <button type="button" class="preset-swatch" data-color="#fce4ec" style="background:#fce4ec;" title="Rosa Suave"></button>
+                            <button type="button" class="preset-swatch" data-color="#e8f5e9" style="background:#e8f5e9;" title="Verde Salvia"></button>
+                            <button type="button" class="preset-swatch" data-color="#e3f2fd" style="background:#e3f2fd;" title="Azul Sereno"></button>
+                            <button type="button" class="preset-swatch" data-color="#212121" style="background:#212121;" title="Preto Elegante"></button>
+                        </div>
+                    </div>
+
+                    <!-- Font Color -->
+                    <div class="control-group">
+                        <label for="picker-font-color">
+                            <i data-lucide="paint-bucket" class="label-icon"></i> Cor da Fonte
+                        </label>
+                        <div class="color-picker-wrapper">
+                            <input type="color" id="picker-font-color" value="#222222">
+                            <span id="font-color-hex" class="hex-label">#222222</span>
+                        </div>
+                        <div class="color-presets" id="font-presets">
+                            <button type="button" class="preset-swatch" data-color="#222222" style="background:#222222;" title="Escuro"></button>
+                            <button type="button" class="preset-swatch" data-color="#8e24aa" style="background:#8e24aa;" title="Roxo"></button>
+                            <button type="button" class="preset-swatch" data-color="#d81b60" style="background:#d81b60;" title="Rosa"></button>
+                            <button type="button" class="preset-swatch" data-color="#1565c0" style="background:#1565c0;" title="Azul"></button>
+                            <button type="button" class="preset-swatch" data-color="#2e7d32" style="background:#2e7d32;" title="Verde"></button>
+                            <button type="button" class="preset-swatch" data-color="#c0392b" style="background:#c0392b;" title="Vinho"></button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Result Modal / Overlay -->
+        <div id="modal-result" class="modal-overlay" style="display: none;">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3><i data-lucide="sparkles"></i> Sua Foto Polaroid</h3>
+                    <button id="btn-close-modal" class="btn-icon" aria-label="Fechar modal">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="result-image-wrapper">
+                        <img id="result-image" alt="Polaroid de Casamento Gerada">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn-retake" class="btn btn-secondary">
+                        <i data-lucide="refresh-cw"></i> Tirar Outra
+                    </button>
+                    <a id="btn-download" class="btn btn-primary" download="polaroid-casamento.png">
+                        <i data-lucide="download"></i> Salvar Imagem
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <footer class="app-footer">
+            <p>Polaroid de Casamento &bull; Feito para o seu momento inesquecível</p>
+        </footer>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
