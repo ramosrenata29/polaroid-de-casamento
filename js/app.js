@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Real-time UI updates
     inputCoupleName.addEventListener('input', (e) => {
         const text = e.target.value.trim();
-        captionPreviewText.textContent = text || 'Nome do Casal';
+        captionPreviewText.textContent = text || 'Iuri e Renata - 10.10.26';
     });
 
     selectFont.addEventListener('change', (e) => {
@@ -170,6 +170,16 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCapture.addEventListener('click', () => {
         generatePolaroidImage();
     });
+
+    function createThumbnailDataUrl(canvas) {
+        const thumbCanvas = document.createElement('canvas');
+        const scale = 400 / canvas.width;
+        thumbCanvas.width = 400;
+        thumbCanvas.height = canvas.height * scale;
+        const ctx = thumbCanvas.getContext('2d');
+        ctx.drawImage(canvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
+        return thumbCanvas.toDataURL('image/jpeg', 0.8);
+    }
 
     function generatePolaroidImage() {
         const canvas = snapshotCanvas;
@@ -247,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Draw Caption Text
-        const captionText = inputCoupleName.value.trim() || 'Nome do Casal';
+        const captionText = inputCoupleName.value.trim() || 'Iuri e Renata - 10.10.26';
         const fontStyle = selectFont.value;
 
         ctx.fillStyle = pickerFontColor.value;
@@ -269,6 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Export to result image and open modal
         const dataUrl = canvas.toDataURL('image/png');
+        const thumbUrl = createThumbnailDataUrl(canvas);
         const filename = `polaroid-${captionText.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'casamento'}.png`;
 
         resultImage.src = dataUrl;
@@ -281,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addPhotoToMural({
             id: Date.now(),
             dataUrl: dataUrl,
+            thumbUrl: thumbUrl,
             caption: captionText,
             filename: filename,
             date: new Date().toLocaleString('pt-BR')
@@ -300,9 +312,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function saveMuralPhotos() {
         try {
-            localStorage.setItem('polaroid-mural-photos', JSON.stringify(muralPhotos));
+            // Store optimized list with thumbnail URLs to fit localStorage limits safely
+            const storablePhotos = muralPhotos.slice(0, 15).map(p => ({
+                id: p.id,
+                thumbUrl: p.thumbUrl || p.dataUrl,
+                dataUrl: p.dataUrl,
+                caption: p.caption,
+                filename: p.filename,
+                date: p.date
+            }));
+            localStorage.setItem('polaroid-mural-photos', JSON.stringify(storablePhotos));
         } catch (e) {
-            console.warn('Could not save mural photos to localStorage:', e);
+            console.warn('LocalStorage full, trimming oldest mural photos:', e);
+            try {
+                const compactPhotos = muralPhotos.slice(0, 5).map(p => ({
+                    id: p.id,
+                    thumbUrl: p.thumbUrl || p.dataUrl,
+                    caption: p.caption,
+                    filename: p.filename,
+                    date: p.date
+                }));
+                localStorage.setItem('polaroid-mural-photos', JSON.stringify(compactPhotos));
+            } catch (err) {
+                console.error('Failed to store mural photos:', err);
+            }
         }
     }
 
@@ -334,12 +367,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         muralGrid.innerHTML = muralPhotos.map(photo => `
             <div class="mural-card" data-id="${photo.id}">
-                <img src="${photo.dataUrl}" alt="${photo.caption}" class="mural-thumb">
+                <img src="${photo.thumbUrl || photo.dataUrl}" alt="${photo.caption}" class="mural-thumb">
                 <div class="mural-card-actions">
                     <button type="button" class="btn-card-action btn-view" title="Visualizar" data-id="${photo.id}">
                         <i data-lucide="eye"></i>
                     </button>
-                    <a href="${photo.dataUrl}" download="${photo.filename}" class="btn-card-action btn-download-card" title="Baixar">
+                    <a href="${photo.dataUrl || photo.thumbUrl}" download="${photo.filename}" class="btn-card-action btn-download-card" title="Baixar">
                         <i data-lucide="download"></i>
                     </a>
                     <button type="button" class="btn-card-action btn-delete" title="Excluir" data-id="${photo.id}">
@@ -358,8 +391,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const photoId = parseInt(card.dataset.id, 10);
                 const photo = muralPhotos.find(p => p.id === photoId);
                 if (photo) {
-                    resultImage.src = photo.dataUrl;
-                    btnDownload.href = photo.dataUrl;
+                    const src = photo.dataUrl || photo.thumbUrl;
+                    resultImage.src = src;
+                    btnDownload.href = src;
                     btnDownload.download = photo.filename;
                     modalResult.style.display = 'flex';
                 }

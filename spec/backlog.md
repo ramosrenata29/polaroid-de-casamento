@@ -27,3 +27,9 @@
 - **Gestão do Mural (`js/app.js`)**:
   - Salvamento automático de cada Polaroid gerada no mural do usuário com persistência em `localStorage`.
   - Ações por card de foto: visualizar em tela cheia no modal, baixar novamente o arquivo `.png` e excluir fotos do mural.
+
+### [2026-09-02 19:10] - Ajuste do Nome do Casal e Otimização do Mural
+- **Fixação do Nome Padrão**:
+  - Nome do casal alterado para **"Iuri e Renata - 10.10.26"** por padrão.
+- **Otimização do Armazenamento do Mural**:
+  - Geração automática de thumbnails otimizados em JPEG para visualização ágil e segura no mural sem estourar o limite de cota do `localStorage`.
