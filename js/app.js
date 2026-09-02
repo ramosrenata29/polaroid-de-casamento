@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const fontColorHex = document.getElementById('font-color-hex');
     const fontPresets = document.querySelectorAll('#font-presets .preset-swatch');
 
+    const muralGrid = document.getElementById('mural-grid');
+    const muralCount = document.getElementById('mural-count');
+
     const modalResult = document.getElementById('modal-result');
     const btnCloseModal = document.getElementById('btn-close-modal');
     const btnRetake = document.getElementById('btn-retake');
@@ -44,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentStream = null;
     let currentFacingMode = 'user'; // 'user' (front) or 'environment' (back)
     let selectedFormat = 'vertical'; // 'vertical', 'square', 'horizontal'
+    let muralPhotos = loadMuralPhotos();
 
     // Init Theme
     const savedTheme = localStorage.getItem('polaroid-theme') ||
@@ -255,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (captionText.length > 25) fontSize = 48;
         if (captionText.length > 35) fontSize = 38;
 
-        // Clean font family string for canvas rendering (e.g., "'Dancing Script', cursive" -> "64px 'Dancing Script', cursive")
+        // Clean font family string for canvas rendering
         ctx.font = `${fontSize}px ${fontStyle}`;
 
         const textX = totalWidth / 2;
@@ -265,12 +269,114 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Export to result image and open modal
         const dataUrl = canvas.toDataURL('image/png');
+        const filename = `polaroid-${captionText.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'casamento'}.png`;
+
         resultImage.src = dataUrl;
         btnDownload.href = dataUrl;
-        btnDownload.download = `polaroid-${captionText.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'casamento'}.png`;
+        btnDownload.download = filename;
 
         modalResult.style.display = 'flex';
+
+        // Add to Mural Gallery
+        addPhotoToMural({
+            id: Date.now(),
+            dataUrl: dataUrl,
+            caption: captionText,
+            filename: filename,
+            date: new Date().toLocaleString('pt-BR')
+        });
     }
+
+    // Mural Storage & Management
+    function loadMuralPhotos() {
+        try {
+            const data = localStorage.getItem('polaroid-mural-photos');
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.warn('Could not load mural photos:', e);
+            return [];
+        }
+    }
+
+    function saveMuralPhotos() {
+        try {
+            localStorage.setItem('polaroid-mural-photos', JSON.stringify(muralPhotos));
+        } catch (e) {
+            console.warn('Could not save mural photos to localStorage:', e);
+        }
+    }
+
+    function addPhotoToMural(photoObj) {
+        muralPhotos.unshift(photoObj); // newest first
+        saveMuralPhotos();
+        renderMural();
+    }
+
+    function deletePhotoFromMural(id) {
+        muralPhotos = muralPhotos.filter(p => p.id !== id);
+        saveMuralPhotos();
+        renderMural();
+    }
+
+    function renderMural() {
+        muralCount.textContent = `${muralPhotos.length} ${muralPhotos.length === 1 ? 'foto' : 'fotos'}`;
+
+        if (muralPhotos.length === 0) {
+            muralGrid.innerHTML = `
+                <div class="mural-empty-state">
+                    <i data-lucide="image"></i>
+                    <p>Nenhuma foto no mural ainda. Tire uma foto para começar o seu álbum!</p>
+                </div>
+            `;
+            if (window.lucide) window.lucide.createIcons();
+            return;
+        }
+
+        muralGrid.innerHTML = muralPhotos.map(photo => `
+            <div class="mural-card" data-id="${photo.id}">
+                <img src="${photo.dataUrl}" alt="${photo.caption}" class="mural-thumb">
+                <div class="mural-card-actions">
+                    <button type="button" class="btn-card-action btn-view" title="Visualizar" data-id="${photo.id}">
+                        <i data-lucide="eye"></i>
+                    </button>
+                    <a href="${photo.dataUrl}" download="${photo.filename}" class="btn-card-action btn-download-card" title="Baixar">
+                        <i data-lucide="download"></i>
+                    </a>
+                    <button type="button" class="btn-card-action btn-delete" title="Excluir" data-id="${photo.id}">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        if (window.lucide) window.lucide.createIcons();
+
+        // Attach event listeners for card actions
+        muralGrid.querySelectorAll('.btn-view, .mural-thumb').forEach(el => {
+            el.addEventListener('click', (e) => {
+                const card = e.target.closest('.mural-card');
+                const photoId = parseInt(card.dataset.id, 10);
+                const photo = muralPhotos.find(p => p.id === photoId);
+                if (photo) {
+                    resultImage.src = photo.dataUrl;
+                    btnDownload.href = photo.dataUrl;
+                    btnDownload.download = photo.filename;
+                    modalResult.style.display = 'flex';
+                }
+            });
+        });
+
+        muralGrid.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const card = e.target.closest('.mural-card');
+                const photoId = parseInt(card.dataset.id, 10);
+                deletePhotoFromMural(photoId);
+            });
+        });
+    }
+
+    // Initial render of mural
+    renderMural();
 
     // Modal controls
     btnCloseModal.addEventListener('click', closeModal);
