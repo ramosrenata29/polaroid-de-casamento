@@ -8,9 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.lucide.createIcons();
     }
 
-    // Shared Key-Value API Endpoint for Live Mural Sync
-    const SHARED_MURAL_API = "https://keyvalue.immanuel.co/api/KeyVal/GetValue/polaroid_casamento_iuri_renata_mural/photos";
-    const SHARED_MURAL_UPDATE_API = "https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/polaroid_casamento_iuri_renata_mural/photos/";
+    // Shared Cloud REST Database Endpoint for Live Shared Mural Sync
+    const SHARED_MURAL_API = "https://api.restful-api.dev/objects/ff808181a067127101a06804987503dc";
 
     // DOM Elements
     const themeToggleBtn = document.getElementById('theme-toggle');
@@ -320,18 +319,16 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(SHARED_MURAL_API);
             if (response.ok) {
-                const text = await response.text();
-                if (text && text !== '""' && text !== 'null') {
-                    const onlinePhotos = JSON.parse(JSON.parse(text));
-                    if (Array.isArray(onlinePhotos) && onlinePhotos.length > 0) {
-                        // Merge online photos with local photos by ID
-                        const photoMap = new Map();
-                        onlinePhotos.forEach(p => photoMap.set(p.id, p));
-                        muralPhotos.forEach(p => photoMap.set(p.id, p));
-                        muralPhotos = Array.from(photoMap.values()).sort((a, b) => b.id - a.id);
-                        saveLocalMuralPhotos();
-                        renderMural();
-                    }
+                const resData = await response.json();
+                if (resData && resData.data && Array.isArray(resData.data.photos)) {
+                    const onlinePhotos = resData.data.photos;
+                    // Merge online photos with local photos by ID
+                    const photoMap = new Map();
+                    onlinePhotos.forEach(p => photoMap.set(p.id, p));
+                    muralPhotos.forEach(p => photoMap.set(p.id, p));
+                    muralPhotos = Array.from(photoMap.values()).sort((a, b) => b.id - a.id);
+                    saveLocalMuralPhotos();
+                    renderMural();
                 }
             }
         } catch (e) {
@@ -351,10 +348,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 date: p.date
             }));
 
-            const payload = encodeURIComponent(JSON.stringify(storablePhotos));
-            await fetch(`${SHARED_MURAL_UPDATE_API}${payload}`, {
-                method: 'POST',
-                headers: { 'Content-Length': '0' }
+            await fetch(SHARED_MURAL_API, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: "Mural Casamento Iuri e Renata",
+                    data: { photos: storablePhotos }
+                })
             });
         } catch (e) {
             console.warn('Failed to publish mural online:', e);
@@ -437,8 +437,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderMural();
     syncOnlineMural();
 
-    // Poll online shared mural every 10 seconds
-    setInterval(syncOnlineMural, 10000);
+    // Poll online shared mural every 5 seconds for live sync across devices
+    setInterval(syncOnlineMural, 5000);
 
     // Modal controls
     btnCloseModal.addEventListener('click', closeModal);

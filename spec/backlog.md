@@ -32,5 +32,6 @@
 - **Remoção do Campo de Texto do Casal**:
   - Removida a caixa de entrada manual do nome do casal no formulário.
   - Texto fixado permanentemente na Polaroid como **"Iuri e Renata - 10.10.26"**.
-- **Compartilhamento Global do Mural (GitHub Pages Sync)**:
-  - Integração com API REST de sincronização para que qualquer usuário que acesse a aplicação no GitHub Pages veja e compartilhe as fotos no mesmo mural público online.
+- **Sincronização do Mural Compartilhado Online**:
+  - Integração com endpoint REST global público com suporte a CORS (`https://api.restful-api.dev/objects/ff808181a067127101a06804987503dc`).
+  - Atualização instantânea e *polling* a cada 5 segundos para garantir que qualquer pessoa que acesse a aplicação no GitHub Pages veja em tempo real as fotos adicionadas ao mural por outros convidados.
