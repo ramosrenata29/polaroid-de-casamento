@@ -28,8 +28,10 @@
   - Salvamento automático de cada Polaroid gerada no mural do usuário com persistência em `localStorage`.
   - Ações por card de foto: visualizar em tela cheia no modal, baixar novamente o arquivo `.png` e excluir fotos do mural.
 
-### [2026-09-02 19:10] - Ajuste do Nome do Casal e Otimização do Mural
-- **Fixação do Nome Padrão**:
-  - Nome do casal alterado para **"Iuri e Renata - 10.10.26"** por padrão.
-- **Otimização do Armazenamento do Mural**:
-  - Geração automática de thumbnails otimizados em JPEG para visualização ágil e segura no mural sem estourar o limite de cota do `localStorage`.
+### [2026-09-02 19:25] - Fixação do Texto "Iuri e Renata - 10.10.26" e Mural Compartilhado
+- **Remoção do Campo de Texto do Casal**:
+  - Removida a caixa de entrada manual do nome do casal no formulário.
+  - Texto fixado permanentemente na Polaroid como **"Iuri e Renata - 10.10.26"**.
+- **Sincronização do Mural Compartilhado Online**:
+  - Integração com endpoint REST global público com suporte a CORS (`https://api.restful-api.dev/objects/ff808181a067127101a06804987503dc`).
+  - Atualização instantânea e *polling* a cada 5 segundos para garantir que qualquer pessoa que acesse a aplicação no GitHub Pages veja em tempo real as fotos adicionadas ao mural por outros convidados.

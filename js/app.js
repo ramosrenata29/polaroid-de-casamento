@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.lucide.createIcons();
     }
 
+    // Shared Cloud REST Database Endpoint for Live Shared Mural Sync
+    const SHARED_MURAL_API = "https://api.restful-api.dev/objects/ff808181a067127101a06804987503dc";
+
     // DOM Elements
     const themeToggleBtn = document.getElementById('theme-toggle');
     const themeIcon = document.getElementById('theme-icon');
@@ -22,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const polaroidFrame = document.getElementById('polaroid-frame');
     const captionPreviewText = document.getElementById('caption-preview-text');
 
-    const inputCoupleName = document.getElementById('input-couple-name');
     const formatButtons = document.querySelectorAll('#format-options .segment-btn');
     const selectFont = document.getElementById('select-font');
 
@@ -43,11 +45,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnDownload = document.getElementById('btn-download');
     const resultImage = document.getElementById('result-image');
 
+    // Fixed Caption Text
+    const FIXED_CAPTION = "Iuri e Renata - 10.10.26";
+
     // State
     let currentStream = null;
     let currentFacingMode = 'user'; // 'user' (front) or 'environment' (back)
     let selectedFormat = 'vertical'; // 'vertical', 'square', 'horizontal'
-    let muralPhotos = loadMuralPhotos();
+    let muralPhotos = loadLocalMuralPhotos();
 
     // Init Theme
     const savedTheme = localStorage.getItem('polaroid-theme') ||
@@ -108,12 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Real-time UI updates
-    inputCoupleName.addEventListener('input', (e) => {
-        const text = e.target.value.trim();
-        captionPreviewText.textContent = text || 'Iuri e Renata - 10.10.26';
-    });
-
+    // Font selection
     selectFont.addEventListener('change', (e) => {
         captionPreviewText.style.fontFamily = e.target.value;
     });
@@ -173,12 +173,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createThumbnailDataUrl(canvas) {
         const thumbCanvas = document.createElement('canvas');
-        const scale = 400 / canvas.width;
-        thumbCanvas.width = 400;
+        const scale = 360 / canvas.width;
+        thumbCanvas.width = 360;
         thumbCanvas.height = canvas.height * scale;
         const ctx = thumbCanvas.getContext('2d');
         ctx.drawImage(canvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
-        return thumbCanvas.toDataURL('image/jpeg', 0.8);
+        return thumbCanvas.toDataURL('image/jpeg', 0.75);
     }
 
     function generatePolaroidImage() {
@@ -256,20 +256,17 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fillText('Câmera Desativada', borderPaddingSides + photoWidth / 2, borderPaddingTop + photoHeight / 2);
         }
 
-        // Draw Caption Text
-        const captionText = inputCoupleName.value.trim() || 'Iuri e Renata - 10.10.26';
+        // Draw Fixed Caption Text
+        const captionText = FIXED_CAPTION;
         const fontStyle = selectFont.value;
 
         ctx.fillStyle = pickerFontColor.value;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Calculate dynamic font size based on text length
         let fontSize = 64;
         if (captionText.length > 25) fontSize = 48;
-        if (captionText.length > 35) fontSize = 38;
 
-        // Clean font family string for canvas rendering
         ctx.font = `${fontSize}px ${fontStyle}`;
 
         const textX = totalWidth / 2;
@@ -280,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Export to result image and open modal
         const dataUrl = canvas.toDataURL('image/png');
         const thumbUrl = createThumbnailDataUrl(canvas);
-        const filename = `polaroid-${captionText.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'casamento'}.png`;
+        const filename = `polaroid-iuri-e-renata-${Date.now()}.png`;
 
         resultImage.src = dataUrl;
         btnDownload.href = dataUrl;
@@ -288,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         modalResult.style.display = 'flex';
 
-        // Add to Mural Gallery
+        // Add to Shared Mural Gallery
         addPhotoToMural({
             id: Date.now(),
             dataUrl: dataUrl,
@@ -299,56 +296,83 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Mural Storage & Management
-    function loadMuralPhotos() {
+    // Local & Online Shared Mural Storage Management
+    function loadLocalMuralPhotos() {
         try {
             const data = localStorage.getItem('polaroid-mural-photos');
             return data ? JSON.parse(data) : [];
         } catch (e) {
-            console.warn('Could not load mural photos:', e);
+            console.warn('Could not load local mural photos:', e);
             return [];
         }
     }
 
-    function saveMuralPhotos() {
+    function saveLocalMuralPhotos() {
         try {
-            // Store optimized list with thumbnail URLs to fit localStorage limits safely
-            const storablePhotos = muralPhotos.slice(0, 15).map(p => ({
+            localStorage.setItem('polaroid-mural-photos', JSON.stringify(muralPhotos));
+        } catch (e) {
+            console.warn('LocalStorage full:', e);
+        }
+    }
+
+    async function syncOnlineMural() {
+        try {
+            const response = await fetch(SHARED_MURAL_API);
+            if (response.ok) {
+                const resData = await response.json();
+                if (resData && resData.data && Array.isArray(resData.data.photos)) {
+                    const onlinePhotos = resData.data.photos;
+                    // Merge online photos with local photos by ID
+                    const photoMap = new Map();
+                    onlinePhotos.forEach(p => photoMap.set(p.id, p));
+                    muralPhotos.forEach(p => photoMap.set(p.id, p));
+                    muralPhotos = Array.from(photoMap.values()).sort((a, b) => b.id - a.id);
+                    saveLocalMuralPhotos();
+                    renderMural();
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to fetch online shared mural:', e);
+        }
+    }
+
+    async function publishMuralOnline() {
+        try {
+            // Keep up to 20 shared photos online for public gallery
+            const storablePhotos = muralPhotos.slice(0, 20).map(p => ({
                 id: p.id,
                 thumbUrl: p.thumbUrl || p.dataUrl,
-                dataUrl: p.dataUrl,
+                dataUrl: p.dataUrl || p.thumbUrl,
                 caption: p.caption,
                 filename: p.filename,
                 date: p.date
             }));
-            localStorage.setItem('polaroid-mural-photos', JSON.stringify(storablePhotos));
+
+            await fetch(SHARED_MURAL_API, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: "Mural Casamento Iuri e Renata",
+                    data: { photos: storablePhotos }
+                })
+            });
         } catch (e) {
-            console.warn('LocalStorage full, trimming oldest mural photos:', e);
-            try {
-                const compactPhotos = muralPhotos.slice(0, 5).map(p => ({
-                    id: p.id,
-                    thumbUrl: p.thumbUrl || p.dataUrl,
-                    caption: p.caption,
-                    filename: p.filename,
-                    date: p.date
-                }));
-                localStorage.setItem('polaroid-mural-photos', JSON.stringify(compactPhotos));
-            } catch (err) {
-                console.error('Failed to store mural photos:', err);
-            }
+            console.warn('Failed to publish mural online:', e);
         }
     }
 
     function addPhotoToMural(photoObj) {
         muralPhotos.unshift(photoObj); // newest first
-        saveMuralPhotos();
+        saveLocalMuralPhotos();
         renderMural();
+        publishMuralOnline();
     }
 
     function deletePhotoFromMural(id) {
         muralPhotos = muralPhotos.filter(p => p.id !== id);
-        saveMuralPhotos();
+        saveLocalMuralPhotos();
         renderMural();
+        publishMuralOnline();
     }
 
     function renderMural() {
@@ -358,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
             muralGrid.innerHTML = `
                 <div class="mural-empty-state">
                     <i data-lucide="image"></i>
-                    <p>Nenhuma foto no mural ainda. Tire uma foto para começar o seu álbum!</p>
+                    <p>Nenhuma foto no mural ainda. Tire uma foto para compartilhar com todos!</p>
                 </div>
             `;
             if (window.lucide) window.lucide.createIcons();
@@ -409,8 +433,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initial render of mural
+    // Initial render and sync online shared mural
     renderMural();
+    syncOnlineMural();
+
+    // Poll online shared mural every 5 seconds for live sync across devices
+    setInterval(syncOnlineMural, 5000);
 
     // Modal controls
     btnCloseModal.addEventListener('click', closeModal);
